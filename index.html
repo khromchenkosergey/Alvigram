@@ -118,7 +118,7 @@
         const sendBtn = document.getElementById('sendBtn');
 
         // ПОДКЛЮЧАЕМСЯ К НАШЕМУ СЕРВЕРУ
-        const socket = new WebSocket('ws://localhost:8080');
+        const socket = new WebSocket('wss://alvigram-server.onrender.com/');
 
         // Когда сервер присылает сообщение
         socket.onmessage = function(event) {
