@@ -123,28 +123,35 @@
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
 
-        // Спрашиваем имя пользователя при входе. Если нажал отмену, будет "Аноним"
-        let userName = prompt("Введите ваше имя:") || "Аноним";
+// Спрашиваем имя пользователя
+let userName = prompt("Введите ваше имя:") || "Аноним";
 
-        // ПОДКЛЮЧАЕМСЯ К СЕРВЕРУ (Вставьте сюда вашу wss:// ссылку от Render)
-        const socket = new WebSocket('wss://alvigram-server.onrender.com/');
+// Объявляем переменную для связи
+let socket;
 
-// ШПИОНСКИЙ КОД ДЛЯ ПОИСКА ОШИБОК НА СМАРТФОНЕ
-// Если соединение успешно открылось
-socket.onopen = function() {
-    alert("Ура! Телефон успешно подключился к серверу!");
-};
+try {
+    // ПОДКЛЮЧАЕМСЯ К СЕРВЕРУ (ЗАМЕНИТЕ НА СВОЙ АДРЕС RENDER БЕЗ СЛЭША НА КОНЦЕ!)
+    socket = new WebSocket('wss://://onrender.com');
 
-// Если произошла ошибка сетевого подключения
-socket.onerror = function(error) {
-    alert("Ошибка сети! Телефон не смог достучаться до сервера. Причина заблокирована браузером.");
-};
+    // Если соединение успешно открылось
+    socket.onopen = function() {
+        alert("Ура! Телефон успешно подключился к серверу!");
+    };
 
-// Если сервер закрыл соединение
-socket.onclose = function(event) {
-    alert("Соединение закрыто кодом: " + event.code + ". Причина: " + event.reason);
-};
+    // Если произошла ошибка сетевого подключения
+    socket.onerror = function(error) {
+        alert("Ошибка сети! Телефон не смог достучаться до сервера.");
+    };
 
+    // Если сервер закрыл соединение
+    socket.onclose = function(event) {
+        alert("Соединение закрыто кодом: " + event.code);
+    };
+
+} catch (e) {
+    // Если телефон сломался на самом моменте создания адреса
+    alert("Критическая ошибка в коде: " + e.message);
+}
         
         // Когда сервер присылает сообщение
         socket.onmessage = function(event) {
