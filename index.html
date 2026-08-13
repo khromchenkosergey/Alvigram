@@ -29,10 +29,20 @@
         .chat-header {
             background-color: #0088cc;
             color: white;
-            padding: 15px;
+            padding: 10px 15px;
             text-align: center;
+        }
+
+        .chat-title {
             font-size: 18px;
             font-weight: bold;
+        }
+
+        /* ПОДПИСЬ СТАТУСА ПОДКЛЮЧЕНИЯ */
+        .chat-status {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 3px;
         }
 
         .chat-messages {
@@ -53,7 +63,6 @@
             word-wrap: break-word;
         }
 
-        /* Стиль для имени автора внутри сообщения */
         .message-author {
             font-size: 11px;
             font-weight: bold;
@@ -101,17 +110,19 @@
             justify-content: center;
             align-items: center;
         }
-
-        .send-btn:hover {
-            background-color: #006699;
-        }
     </style>
 </head>
 <body>
 
     <div class="chat-container">
-        <div class="chat-header">Чат Версия 2.0</div>
+        <!-- Улучшенная шапка со статусом -->
+        <div class="chat-header">
+            <div class="chat-title">Alvigram 3.0</div>
+            <div class="chat-status" id="chatStatus">Подключение...</div>
+        </div>
+        
         <div class="chat-messages" id="chatMessages"></div>
+        
         <div class="chat-input-area">
             <input type="text" class="chat-input" id="messageInput" placeholder="Напишите сообщение..." autocomplete="off">
             <button class="send-btn" id="sendBtn">➤</button>
@@ -122,84 +133,71 @@
         const chatMessages = document.getElementById('chatMessages');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
+        const chatStatus = document.getElementById('chatStatus');
 
-// Спрашиваем имя пользователя
-let userName = prompt("Введите ваше имя:") || "Аноним";
+        let userName = prompt("Введите ваше имя:") || "Аноним";
+        let socket;
 
-// Объявляем переменную для связи
-let socket;
+        function connectToServer() {
+            chatStatus.textContent = "Соединение...";
+            chatStatus.style.color = "white";
 
-try {
-    // ПОДКЛЮЧАЕМСЯ К СЕРВЕРУ (ЗАМЕНИТЕ НА СВОЙ АДРЕС RENDER БЕЗ СЛЭША НА КОНЦЕ!)
-    socket = new WebSocket('wss://alvigram-server.onrender.com');
+            // ВСТАВЬТЕ СЮДА ВАШУ ССЫЛКУ ОТ RENDER (ОБЯЗАТЕЛЬНО БЕЗ СЛЭША / НА КОНЦЕ)
+            socket = new WebSocket('wss://alvigram-server.onrender.com');
 
-    // Если соединение успешно открылось
-    socket.onopen = function() {
-        alert("Ура! Телефон успешно подключился к серверу!");
-    };
-
-    // Если произошла ошибка сетевого подключения
-    socket.onerror = function(error) {
-        alert("Ошибка сети! Телефон не смог достучаться до сервера.");
-    };
-
-    // Если сервер закрыл соединение
-    socket.onclose = function(event) {
-        alert("Соединение закрыто кодом: " + event.code);
-    };
-
-} catch (e) {
-    // Если телефон сломался на самом моменте создания адреса
-    alert("Критическая ошибка в коде: " + e.message);
-}
-        
-        // Когда сервер присылает сообщение
-        socket.onmessage = function(event) {
-            // Пытаемся расшифровать имя и текст
-            try {
-                const data = JSON.parse(event.data);
-                
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add('message', 'received');
-
-                // Создаем блок для имени собеседника
-                const authorDiv = document.createElement('div');
-                authorDiv.classList.add('message-author');
-                authorDiv.textContent = data.name;
-
-                // Создаем блок для текста
-                const textSpan = document.createElement('span');
-                textSpan.textContent = data.text;
-
-                messageDiv.appendChild(authorDiv);
-                messageDiv.appendChild(textSpan);
-
-                chatMessages.appendChild(messageDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            } catch(e) {
-                // Если пришел обычный текст старого формата
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add('message', 'received');
-                messageDiv.textContent = event.data;
-                chatMessages.appendChild(messageDiv);
-            }
-        };
-
-        // Функция отправки
-        function sendMessage() {
-            const text = messageInput.value.trim();
-            if (text === '') return;
-
-            // Упаковываем имя и текст в один пакет (JSON)
-            const messagePackage = {
-                name: userName,
-                text: text
+            socket.onopen = function() {
+                chatStatus.textContent = `В сети как: ${userName}`;
+                chatStatus.style.color = "#adff2f"; // Зеленый цвет текста
             };
 
-            // Отправляем пакет на сервер в виде текста
+            socket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    const messageDiv = document.createElement('div');
+                    messageDiv.classList.add('message', 'received');
+
+                    const authorDiv = document.createElement('div');
+                    authorDiv.classList.add('message-author');
+                    authorDiv.textContent = data.name;
+
+                    const textSpan = document.createElement('span');
+                    textSpan.textContent = data.text;
+
+                    messageDiv.appendChild(authorDiv);
+                    messageDiv.appendChild(textSpan);
+                    chatMessages.appendChild(messageDiv);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                } catch(e) {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.classList.add('message', 'received');
+                    messageDiv.textContent = event.data;
+                    chatMessages.appendChild(messageDiv);
+                }
+            };
+
+            socket.onerror = function() {
+                chatStatus.textContent = "Ошибка сети ❌";
+                chatStatus.style.color = "#ff4c4c"; // Красный цвет
+            };
+
+            socket.onclose = function() {
+                chatStatus.textContent = "Отключен. Переподключение...";
+                chatStatus.style.color = "orange";
+                // Переподключаемся через 3 секунды, если сеть упала
+                setTimeout(connectToServer, 3000);
+            };
+        }
+
+        // Запуск подключения
+        connectToServer();
+
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (text === '' || socket.readyState !== WebSocket.OPEN) return;
+
+            const messagePackage = { name: userName, text: text };
             socket.send(JSON.stringify(messagePackage));
 
-            // Показываем СВОЁ сообщение на экране (свое имя выводить не обязательно, ведь мы и так знаем, что это мы)
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', 'sent');
             messageDiv.textContent = text;
@@ -211,9 +209,7 @@ try {
 
         sendBtn.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
+            if (event.key === 'Enter') sendMessage();
         });
     </script>
 
