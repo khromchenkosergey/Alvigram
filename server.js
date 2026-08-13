@@ -1,20 +1,17 @@
 // Подключаем библиотеку для работы сетевых соединений
 const WebSocket = require('ws');
 
-// Запускаем сервер на порту, который выдаст хостинг, или на 8080 локально
+// Запускаем сервер на порту хостинга и разрешаем внешние подключения
 const port = process.env.PORT || 8080;
-const server = new WebSocket.Server({ port: port });
+const server = new WebSocket.Server({ host: '0.0.0.0', port: port });
 
 console.log('Сервер запущен на порту ' + port);
 
 // Список всех подключенных пользователей
 const clients = new Set();
 
-console.log('Сервер запущен на порту 8080. Ожидание подключений...');
-
 // Когда кто-то подключается к серверу
 server.on('connection', (ws) => {
-    // Добавляем пользователя в наш список
     clients.add(ws);
     console.log('Новый пользователь подключился!');
 
@@ -23,14 +20,14 @@ server.on('connection', (ws) => {
         console.log('Получено сообщение: ' + message);
 
         // Пересылаем это сообщение ВСЕМ, КРОМЕ автора
-for (let client of clients) {
-    if (client.readyState === WebSocket.OPEN && client !== ws) {
-        client.send(message.toString());
-    }
-}
+        for (let client of clients) {
+            if (client.readyState === WebSocket.OPEN && client !== ws) {
+                client.send(message.toString());
+            }
+        }
     });
 
-    // Когда пользователь закрывает вкладку или отключается
+    // Когда пользователь отключается
     ws.on('close', () => {
         clients.delete(ws);
         console.log('Пользователь отключился.');
