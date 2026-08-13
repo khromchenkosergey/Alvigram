@@ -53,13 +53,19 @@
             word-wrap: break-word;
         }
 
-        /* Мои сообщения (зеленые, справа) */
+        /* Стиль для имени автора внутри сообщения */
+        .message-author {
+            font-size: 11px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 3px;
+        }
+
         .message.sent {
             background-color: #dcf8c6;
             align-self: flex-end;
         }
 
-        /* Чужие сообщения (белые, слева) */
         .message.received {
             background-color: #ffffff;
             align-self: flex-start;
@@ -117,29 +123,59 @@
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
 
-        // ПОДКЛЮЧАЕМСЯ К НАШЕМУ СЕРВЕРУ
+        // Спрашиваем имя пользователя при входе. Если нажал отмену, будет "Аноним"
+        let userName = prompt("Введите ваше имя:") || "Аноним";
+
+        // ПОДКЛЮЧАЕМСЯ К СЕРВЕРУ (Вставьте сюда вашу wss:// ссылку от Render)
         const socket = new WebSocket('wss://alvigram-server.onrender.com/');
 
         // Когда сервер присылает сообщение
         socket.onmessage = function(event) {
-            // Создаем блок для чужого сообщения
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', 'received');
-            messageDiv.textContent = event.data;
+            // Пытаемся расшифровать имя и текст
+            try {
+                const data = JSON.parse(event.data);
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', 'received');
 
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+                // Создаем блок для имени собеседника
+                const authorDiv = document.createElement('div');
+                authorDiv.classList.add('message-author');
+                authorDiv.textContent = data.name;
+
+                // Создаем блок для текста
+                const textSpan = document.createElement('span');
+                textSpan.textContent = data.text;
+
+                messageDiv.appendChild(authorDiv);
+                messageDiv.appendChild(textSpan);
+
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } catch(e) {
+                // Если пришел обычный текст старого формата
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', 'received');
+                messageDiv.textContent = event.data;
+                chatMessages.appendChild(messageDiv);
+            }
         };
 
-        // Функция отправки сообщения
+        // Функция отправки
         function sendMessage() {
             const text = messageInput.value.trim();
             if (text === '') return;
 
-            // Отправляем текст на сервер
-            socket.send(text);
+            // Упаковываем имя и текст в один пакет (JSON)
+            const messagePackage = {
+                name: userName,
+                text: text
+            };
 
-            // Создаем блок для СВОЕГО сообщения на экране
+            // Отправляем пакет на сервер в виде текста
+            socket.send(JSON.stringify(messagePackage));
+
+            // Показываем СВОЁ сообщение на экране (свое имя выводить не обязательно, ведь мы и так знаем, что это мы)
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', 'sent');
             messageDiv.textContent = text;
